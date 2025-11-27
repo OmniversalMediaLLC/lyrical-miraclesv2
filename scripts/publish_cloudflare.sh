@@ -66,8 +66,12 @@ sync_r2_dir() {
 
 seed_d1() {
   python3 "$ROOT_DIR/platform/infra/scripts/manifest_to_sql.py" --manifest "$DIST_DIR/manifest.json" --output "$SQL_TEMP"
-  "$WRANGLER_BIN" d1 execute "$CF_D1_DATABASE" --file "$SCHEMA_FILE"
-  "$WRANGLER_BIN" d1 execute "$CF_D1_DATABASE" --file "$SQL_TEMP"
+  local remote_flag=""
+  if [[ ${CF_USE_REMOTE_D1:-true} == true ]]; then
+    remote_flag="--remote"
+  fi
+  "$WRANGLER_BIN" d1 execute "$CF_D1_DATABASE" $remote_flag --yes --file "$SCHEMA_FILE"
+  "$WRANGLER_BIN" d1 execute "$CF_D1_DATABASE" $remote_flag --yes --file "$SQL_TEMP"
 }
 
 case "${1:-all}" in

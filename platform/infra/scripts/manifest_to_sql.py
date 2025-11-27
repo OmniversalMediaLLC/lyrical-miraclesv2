@@ -33,7 +33,7 @@ def main() -> None:
     args = parser.parse_args()
 
     data = json.loads(args.manifest.read_text(encoding="utf-8"))
-    statements: List[str] = ["BEGIN TRANSACTION;"]
+    statements: List[str] = []
 
     sections = (
         ("content_assets", data.get("content", []), ["path", "release", "title", "type", "checksum"]),
@@ -50,7 +50,6 @@ def main() -> None:
             chunk.append(f"INSERT INTO {table} ({', '.join(cols)}) {rows_for_section([entry], cols)[0]};")
         statements.extend(chunk)
 
-    statements.append("COMMIT;")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text("\n".join(statements) + "\n", encoding="utf-8")
 
