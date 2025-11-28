@@ -30,7 +30,10 @@
    - Additional exporters (Ghost, Drupal, Astro/Next.js) read from the same manifest so every surface stays consistent.
 
 7. **Vectorize / AutoRAG**  
- - Use `scripts/autorag/ingest.py` (TBD) to split lyrics + essays, create embeddings with Workers AI, and upload to Cloudflare Vectorize.  
+  - Use `scripts/autorag/ingest.py` to split lyrics + essays. Set `CF_VECTORIZE_WORKER_URL=https://<worker>/ingest` to post batches to the Workers ingest endpoint (which performs embeddings + upserts).  
+  - Fallback mode (no Worker URL) calls the Workers AI + Vectorize REST APIs directly (requires `CF_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CF_VECTORIZE_INDEX`, `CF_AI_EMBED_MODEL`).  
+  - Example: `source lyrical-env.sh && python scripts/autorag/ingest.py --chunk-size 1500 --chunk-overlap 200 --worker-url https://lyrical-vector-ingest.selene.workers.dev/ingest`  
+  - Requires `requests` (`pip install requests`).  
   - Store chunk IDs and metadata alongside track IDs for the site chatbot + search.
 
 8. **Deploy UI / Widgets**  

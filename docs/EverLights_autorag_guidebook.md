@@ -93,9 +93,32 @@ export default {
     }
 
     return new Response("OK");
-  }
+}
 }
 ```
+
+## New ingestion helper (local script)
+
+Run embeddings + upserts outside the Worker using the CLI script:
+
+```bash
+source lyrical-env.sh  # provides CF_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CF_VECTORIZE_INDEX
+pip install requests
+python scripts/autorag/ingest.py --chunk-size 1800 --chunk-overlap 200
+```
+
+The script walks `dist/manifest.json`, chunks the markdown/html/ipynb files, calls
+Workers AI (`CF_AI_EMBED_MODEL`, default `@cf/baai/bge-base-en-v1.5`) for embeddings,
+and uploads batches straight to Vectorize. Use `--dry-run` to inspect chunk counts
+before burning API credits.
+
+### Workers-based ingest (recommended)
+
+Deploy the helper Worker under `platform/vectorize-worker/` (`wrangler deploy`).
+Then set `CF_VECTORIZE_WORKER_URL=https://<worker-domain>/ingest` and run the same
+CLI command; the local script will send chunk payloads to the Worker, which handles
+embeddings + Vectorize upserts via its bindings. This avoids exposing the raw API
+and matches Cloudflare’s best practices.
 
 LangChain’s official examples show the same bindings for Cloudflare Vectorize + Workers AI; you can lift patterns as needed. ([LangChain][5])
 
