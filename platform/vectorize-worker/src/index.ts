@@ -11,6 +11,36 @@ type ChunkPayload = {
 
 const EMBED_MODEL = "@cf/baai/bge-base-en-v1.5";
 
+function extractEmbedding(response: unknown): number[] | undefined {
+  if (!response || typeof response !== "object") {
+    return undefined;
+  }
+  const payload = response as { data?: unknown; result?: { data?: unknown } };
+  const data = (Array.isArray(payload.data)
+    ? payload.data
+    : Array.isArray(payload.result?.data)
+    ? payload.result?.data
+    : undefined) as unknown[] | undefined;
+  if (!data || data.length === 0) {
+    return undefined;
+  }
+  const first = data[0] as unknown;
+  if (Array.isArray(first)) {
+    return first as number[];
+  }
+  if (ArrayBuffer.isView(first)) {
+    return Array.from(first as ArrayLike<number>);
+  }
+  if (
+    first &&
+    typeof first === "object" &&
+    Array.isArray((first as { embedding?: unknown }).embedding)
+  ) {
+    return ((first as { embedding: number[] }).embedding ?? []).slice();
+  }
+  return undefined;
+}
+
 async function handleIngest(request: Request, env: Env): Promise<Response> {
   let chunks: ChunkPayload[];
   try {
@@ -37,9 +67,7 @@ async function handleIngest(request: Request, env: Env): Promise<Response> {
         continue;
       }
       const embeddingResponse = await env.AI.run(EMBED_MODEL, { text: chunk.text });
-      const values = Array.isArray(embeddingResponse?.data)
-        ? (embeddingResponse.data[0] as number[])
-        : undefined;
+      const values = extractEmbedding(embeddingResponse);
       if (!values || values.length === 0) {
         throw new Error("Missing embedding values in AI response");
       }
@@ -82,9 +110,17 @@ async function handleSearch(request: Request, env: Env): Promise<Response> {
 
   try {
     const embeddingResponse = await env.AI.run(EMBED_MODEL, { text: query });
-    const vector = Array.isArray(embeddingResponse?.data)
-      ? (embeddingResponse.data[0] as number[])
-      : undefined;
+    console.log("search embedding shape", {
+      hasDataArray: Array.isArray((embeddingResponse as { data?: unknown[] })?.data),
+      hasResultDataArray: Array.isArray(
+        (embeddingResponse as { result?: { data?: unknown[] } })?.result?.data,
+      ),
+      firstType:
+        (embeddingResponse as { data?: unknown[] })?.data?.[0]?.constructor?.name ??
+        (embeddingResponse as { result?: { data?: unknown[] } })?.result?.data?.[0]?.constructor?.name ??
+        null,
+    });
+    const vector = extractEmbedding(embeddingResponse);
     if (!vector || vector.length === 0) {
       throw new Error("Failed to generate embedding for query");
     }
