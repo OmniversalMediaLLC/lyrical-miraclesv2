@@ -11,20 +11,6 @@ type ChunkPayload = {
 
 const EMBED_MODEL = "@cf/baai/bge-base-en-v1.5";
 
-function describeEmbeddingResponse(response: unknown) {
-  const payload = response as { data?: unknown; result?: { data?: unknown } };
-  const dataArray = payload?.data as unknown[] | undefined;
-  const resultArray = payload?.result?.data as unknown[] | undefined;
-  return {
-    hasDataArray: Array.isArray(dataArray),
-    hasResultDataArray: Array.isArray(resultArray),
-    dataType:
-      dataArray?.[0]?.constructor?.name ?? resultArray?.[0]?.constructor?.name ?? null,
-    dataLength: Array.isArray(dataArray?.[0]) ? (dataArray?.[0] as unknown[]).length : null,
-    preview: Array.isArray(dataArray?.[0]) ? (dataArray?.[0] as number[]).slice(0, 3) : null,
-  };
-}
-
 function extractEmbedding(response: unknown): number[] | undefined {
   if (!response || typeof response !== "object") {
     return undefined;
@@ -40,7 +26,7 @@ function extractEmbedding(response: unknown): number[] | undefined {
   }
   const first = data[0] as unknown;
   if (Array.isArray(first)) {
-    return first as number[];
+    return Array.from(first as number[]);
   }
   if (ArrayBuffer.isView(first)) {
     return Array.from(first as ArrayLike<number>);
@@ -123,21 +109,13 @@ async function handleSearch(request: Request, env: Env): Promise<Response> {
   );
 
   try {
-    const debug = url.searchParams.get("debug") === "1";
     const embeddingResponse = await env.AI.run(EMBED_MODEL, { text: query });
-    if (debug) {
-      return new Response(
-        JSON.stringify({ ok: true, debug: describeEmbeddingResponse(embeddingResponse) }),
-        { headers: { "content-type": "application/json" } },
-      );
-    }
     const vector = extractEmbedding(embeddingResponse);
     if (!vector || vector.length === 0) {
       throw new Error("Failed to generate embedding for query");
     }
 
-    const results = await env.VECTORIZE_INDEX.query({
-      vector,
+    const results = await env.VECTORIZE_INDEX.query(vector, {
       topK,
       includeVectors: false,
       returnMetadata: true,
