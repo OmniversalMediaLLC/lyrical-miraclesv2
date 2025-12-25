@@ -26,7 +26,7 @@ function extractEmbedding(response: unknown): number[] | undefined {
   }
   const first = data[0] as unknown;
   if (Array.isArray(first)) {
-    return first as number[];
+    return Array.from(first as number[]);
   }
   if (ArrayBuffer.isView(first)) {
     return Array.from(first as ArrayLike<number>);
@@ -110,23 +110,12 @@ async function handleSearch(request: Request, env: Env): Promise<Response> {
 
   try {
     const embeddingResponse = await env.AI.run(EMBED_MODEL, { text: query });
-    console.log("search embedding shape", {
-      hasDataArray: Array.isArray((embeddingResponse as { data?: unknown[] })?.data),
-      hasResultDataArray: Array.isArray(
-        (embeddingResponse as { result?: { data?: unknown[] } })?.result?.data,
-      ),
-      firstType:
-        (embeddingResponse as { data?: unknown[] })?.data?.[0]?.constructor?.name ??
-        (embeddingResponse as { result?: { data?: unknown[] } })?.result?.data?.[0]?.constructor?.name ??
-        null,
-    });
     const vector = extractEmbedding(embeddingResponse);
     if (!vector || vector.length === 0) {
       throw new Error("Failed to generate embedding for query");
     }
 
-    const results = await env.VECTORIZE_INDEX.query({
-      vector,
+    const results = await env.VECTORIZE_INDEX.query(vector, {
       topK,
       includeVectors: false,
       returnMetadata: true,

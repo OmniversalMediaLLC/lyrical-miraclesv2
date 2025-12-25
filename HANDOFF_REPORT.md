@@ -51,7 +51,7 @@
    - Wrapper logging snippet used in the last run lives in `codex-logs.md` if needed.
 6. **Workers Search**
    - Worker deployed at `lyrical-vector-ingest.omniversalmail.workers.dev`.
-   - `/ingest` works; `/search` currently returns `VECTOR_QUERY_ERROR … got 0 dimensions`. Need to inspect query embedding parsing (see TODOs below).
+   - `/ingest` and `/search` both work. The zero-dimension Vectorize error was resolved on Dec 19 by normalizing embedding outputs and using the latest Vectorize query signature.
 
 ## 4. Current State (as of latest session)
 - `content/lyrics/releases/HAWK-ARS-00/01_singles/*` all contain real lyrics + metadata (no placeholders anywhere).
@@ -62,11 +62,10 @@
 - **Vectorize Index (`lyrical-miracles`):** 2,077 lyric chunks embedded and upserted with metadata via the Workers ingest run.
 
 ## 5. Outstanding / Watchlist
-1. **Workers Search bug:** `/search` fails because the returned query vector is zero-length per Vectorize (HTTP 40006). Inspect `platform/vectorize-worker/src/index.ts` and confirm `env.AI.run` response shape; may need `embeddingResponse.data[0].embedding` instead of `[0]`.
-2. **Manifest scope mismatch:** Running `scripts/build_manifest.py` manually (with `--content content`) sees 321 entries, but `publish_cloudflare.sh` (which calls the script without flags) only includes `content/lyrics`. Decide whether the manifest should cover articles/notebooks or restrict to lyrics.
-3. **Wrangler version:** Logs suggest upgrading to 4.56.0. Might eliminate the intermittent D1 `fetch failed` warning.
-4. **Parquet output:** Skipped because `pandas`/`pyarrow` aren’t installed. Install if analytics/D1 ingestion needs parquet.
-5. **Automation backlog:** `docs/NEXTSTEPS_TODO.md` still lists site rebuild, exporters, cycle automation, etc.
+1. **Manifest scope mismatch:** Running `scripts/build_manifest.py` manually (with `--content content`) sees 321 entries, but `publish_cloudflare.sh` (which calls the script without flags) only includes `content/lyrics`. Decide whether the manifest should cover articles/notebooks or restrict to lyrics.
+2. **Wrangler version:** Worker was redeployed with Wrangler 4.56.0, but other scripts still use the default (4.51.0). Consider upgrading globally to avoid the intermittent D1 `fetch failed` warning.
+3. **Parquet output:** Skipped because `pandas`/`pyarrow` aren’t installed. Install if analytics/D1 ingestion needs parquet.
+4. **Automation backlog:** `docs/NEXTSTEPS_TODO.md` still lists site rebuild, exporters, cycle automation, etc.
 
 ## 6. Working With Hawk (User Notes)
 - **Expect nonlinear brainstorming.** Hawk will often explore tangents or revisit earlier decisions. Keep a running list of requested outcomes and confirm priorities before deep work.
@@ -83,7 +82,7 @@
 5. `bash scripts/publish_cloudflare.sh r2` if new media landed.
 6. `bash scripts/publish_cloudflare.sh d1` after manifest changes.
 7. `python3 scripts/autorag/ingest.py --manifest dist/manifest.json --content-root content` to refresh Vectorize.
-8. Fix Worker `/search` by validating query embedding handling; redeploy via `wrangler deploy` under `platform/vectorize-worker`.
+8. Worker `/search` is fixed; if it breaks again, inspect `platform/vectorize-worker/src/index.ts` and redeploy via `wrangler deploy` under `platform/vectorize-worker`.
 9. Keep `codex-logs.md` updated with any non-obvious commands or hiccups for the next person.
 
 Stay organized, over-communicate, and we’ll keep this archive humming.
