@@ -36,6 +36,14 @@ lyrical-miracles-v2/
 5. Use `platform/exporters/*` to sync pages/posts into WordPress, Ghost, Drupal, or static builds.  
 6. Trigger the Vectorize/AutoRAG ingest described in `docs/EverLights_autorag_guidebook.md`.
 
+## Cloudflare Pages (Static Site)
+This repo includes a tiny static browser for the lyrics archive that builds into `dist/`:
+
+- Build locally: `python3 scripts/build_web_dist.py` then serve `dist/` (any static server).
+- CI deploy: `.github/workflows/cloudflare-pages.yml` publishes `dist/` to Cloudflare Pages.
+  - Set GitHub repo secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+  - Create a Cloudflare Pages project named `lyrical-miraclesv2` (or edit the workflow project name).
+
 ## Status
 - Source materials imported from `~/lyrical-miracles/HAWK-ARS`.  
 - TODO backlog copied into `docs/NEXTSTEPS_TODO.md`.  
